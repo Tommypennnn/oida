@@ -795,8 +795,10 @@ function buildUI() {
     ['hist-placeholder',  'hist-content'],
     ['look-placeholder',  'look-content'],
   ].forEach(([ph, ct]) => {
-    document.getElementById(ph).style.display = 'none';
-    document.getElementById(ct).style.display = 'block';
+    const phEl = document.getElementById(ph);
+    const ctEl = document.getElementById(ct);
+    if (phEl) phEl.style.display = 'none';
+    if (ctEl) ctEl.style.display = 'block';
   });
 }
 
