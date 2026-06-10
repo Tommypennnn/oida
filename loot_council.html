@@ -712,6 +712,31 @@ function classBadge(cls) {
   const c = cls.toUpperCase().replace(/\s+/g,'');
   return `<span class="class-badge class-${c}">${cls}</span>`;
 }
+
+// ── PARSE WORKBOOK (shared by upload and auto-load) ──
+function processWorkbook(wb, filename) {
+  const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('loot') && s.toLowerCase().includes('hist')) || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+  allRows = raw.map(r => ({
+    player:   r['player']   || r['Player']   || '',
+    date:     r['date']     || r['Date']     || '',
+    item:     cleanItem(r['item'] || r['Item'] || ''),
+    itemID:   r['itemID']   || '',
+    response: r['response'] || r['Response'] || '',
+    votes:    parseInt(r['votes'] || r['Votes'] || 0) || 0,
+    cls:      (r['class']   || r['Class']    || '').toUpperCase(),
+    instance: r['instance'] || r['Instance'] || '',
+    boss:     r['boss']     || r['Boss']     || '',
+    gear1:    cleanItem(r['gear1'] || r['Gear1'] || ''),
+    gear2:    cleanItem(r['gear2'] || r['Gear2'] || ''),
+    raidDate: r['RaidDate'] || r['date']     || '',
+  })).filter(r => r.player && r.item && r.item !== '—');
+
+  document.getElementById('file-status').textContent = `${filename} · ${allRows.length} entries`;
+  buildUI();
+}
 // Auto-load xlsx from GitHub
 const XLSX_URL = 'https://raw.githubusercontent.com/tommypennnn/oida/main/RC_Lootcouncil.xlsx';
 
@@ -734,36 +759,24 @@ function handleFile(e) {
   document.getElementById('file-status').textContent = 'Loading…';
 
   const reader = new FileReader();
+
+  reader.onerror = function() {
+    document.getElementById('file-status').textContent = 'Error reading file';
+    console.error('FileReader error:', reader.error);
+  };
+
   reader.onload = function(ev) {
     try {
-      const wb = XLSX.read(ev.target.result, { type: 'array' });
-      const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('loot') && s.toLowerCase().includes('hist')) || wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
-      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-      allRows = raw.map(r => ({
-        player:    r['player'] || r['Player'] || '',
-        date:      r['date']   || r['Date']   || '',
-        item:      cleanItem(r['item'] || r['Item'] || ''),
-        itemID:    r['itemID'] || '',
-        response:  r['response'] || r['Response'] || '',
-        votes:     parseInt(r['votes'] || r['Votes'] || 0) || 0,
-        cls:       (r['class'] || r['Class'] || '').toUpperCase(),
-        instance:  r['instance'] || r['Instance'] || '',
-        boss:      r['boss'] || r['Boss'] || '',
-        gear1:     cleanItem(r['gear1'] || r['Gear1'] || ''),
-        gear2:     cleanItem(r['gear2'] || r['Gear2'] || ''),
-        raidDate:  r['RaidDate'] || r['date'] || '',
-      })).filter(r => r.player && r.item && r.item !== '—');
-
-      document.getElementById('file-status').textContent = `${file.name} (${allRows.length} entries)`;
-      buildUI();
+      // Use binary string — most compatible across browsers & hosting environments
+      const wb = XLSX.read(ev.target.result, { type: 'binary' });
+      processWorkbook(wb, file.name);
     } catch(err) {
-      document.getElementById('file-status').textContent = 'Error reading file';
-      console.error(err);
+      document.getElementById('file-status').textContent = 'Error parsing file — check console (F12)';
+      console.error('XLSX parse error:', err);
     }
   };
-  reader.readAsArrayBuffer(file);
+
+  reader.readAsBinaryString(file);
 }
 
 // ── BUILD ALL UI ──
