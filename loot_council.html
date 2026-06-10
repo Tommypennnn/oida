@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thunderstrike — Loot Council</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg-deep:    #0d0f14;
+    --bg-panel:   #13161e;
+    --bg-card:    #1a1e2a;
+    --bg-hover:   #212639;
+    --border:     #2a2f42;
+    --border-gold:#6b4f1a;
+    --gold:       #c8972a;
+    --gold-light: #f0c060;
+    --gold-dim:   #7a5c1a;
+    --crimson:    #a02020;
+    --crimson-light:#e05050;
+    --green:      #1eff00;
+    --blue:       #0070dd;
+    --purple:     #a335ee;
+    --orange:     #ff8000;
+    --gray:       #9d9d9d;
+    --text:       #c8cad6;
+    --text-dim:   #6b6f82;
+    --text-bright:#eceef8;
+    --font-display: 'Cinzel', serif;
+    --font-body:    'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(180deg, #0a0c10 0%, #13161e 100%);
+    border-bottom: 1px solid var(--border-gold);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .guild-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 24px rgba(200,151,42,0.4);
+  }
+
+  .guild-sub {
+    font-size: 11px;
+    color: var(--gold-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .upload-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 8px 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-gold {
+    background: linear-gradient(180deg, #c8972a 0%, #8a6018 100%);
+    color: #0d0f14;
+    font-weight: 700;
+    border: 1px solid #f0c060;
+  }
+  .btn-gold:hover { background: linear-gradient(180deg, #f0c060 0%, #c8972a 100%); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--border-gold);
+  }
+  .btn-ghost:hover { background: rgba(200,151,42,0.1); }
+
+  #file-input { display: none; }
+
+  .file-status {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* ── TABS ── */
+  nav {
+    display: flex;
+    gap: 0;
+    padding: 0 32px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 14px 24px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--gold); }
+
+  .tab.active {
+    color: var(--gold-light);
+    border-bottom-color: var(--gold);
+  }
+
+  /* ── MAIN ── */
+  main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── PLACEHOLDER ── */
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .placeholder-icon {
+    font-size: 56px;
+    opacity: 0.3;
+    filter: grayscale(1);
+  }
+
+  .placeholder h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--gold-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .placeholder p { font-size: 13px; max-width: 360px; line-height: 1.6; }
+
+  /* ── DASHBOARD ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(200,151,42,0.05);
+  }
+
+  .panel-body { padding: 0; }
+
+  /* ── PLAYER TABLE IN DASHBOARD ── */
+  .dash-table { width: 100%; border-collapse: collapse; }
+
+  .dash-table th {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    position: sticky;
+    top: 0;
+  }
+
+  .dash-table td {
+    padding: 7px 14px;
+    border-bottom: 1px solid rgba(42,47,66,0.5);
+    font-size: 12px;
+  }
+
+  .dash-table tr:hover td { background: var(--bg-hover); cursor: pointer; }
+  .dash-table tr:last-child td { border-bottom: none; }
+
+  .class-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  /* WoW class colors */
+  .class-WARRIOR   { background: rgba(199,156,110,0.15); color: #c79c6e; }
+  .class-PALADIN   { background: rgba(244,140,186,0.15); color: #f48cba; }
+  .class-HUNTER    { background: rgba(170,211,114,0.15); color: #aad372; }
+  .class-ROGUE     { background: rgba(255,244,104,0.15); color: #fff468; }
+  .class-PRIEST    { background: rgba(255,255,255,0.1);  color: #ffffff; }
+  .class-SHAMAN    { background: rgba(0,112,222,0.15);   color: #0070dd; }
+  .class-MAGE      { background: rgba(63,199,235,0.15);  color: #3fc7eb; }
+  .class-WARLOCK   { background: rgba(135,136,238,0.15); color: #8788ee; }
+  .class-DRUID     { background: rgba(255,124,10,0.15);  color: #ff7c0a; }
+  .class-DEATHKNIGHT { background: rgba(196,30,58,0.15); color: #c41e3a; }
+
+  /* loot response colors */
+  .resp-bis    { color: var(--gold-light); font-weight: 600; }
+  .resp-2ndbis { color: var(--orange); }
+  .resp-upgrade { color: var(--green); }
+  .resp-offspec { color: var(--blue); }
+  .resp-pass   { color: var(--text-dim); }
+  .resp-other  { color: var(--gray); }
+
+  .num-cell { text-align: right; font-variant-numeric: tabular-nums; color: var(--gold); font-weight: 600; }
+
+  /* boss bar chart */
+  .boss-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid rgba(42,47,66,0.5); }
+  .boss-row:last-child { border-bottom: none; }
+  .boss-name { font-size: 12px; min-width: 160px; color: var(--text); }
+  .boss-bar-wrap { flex: 1; height: 6px; background: var(--bg-panel); border-radius: 3px; overflow: hidden; }
+  .boss-bar { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 3px; transition: width 0.6s ease; }
+  .boss-count { font-size: 12px; color: var(--gold); font-weight: 600; min-width: 24px; text-align: right; }
+
+  /* ── LOOT HISTORY ── */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-input {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 7px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .filter-input:focus { border-color: var(--gold-dim); }
+
+  .filter-input::placeholder { color: var(--text-dim); }
+
+  select.filter-input option { background: var(--bg-card); }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    align-self: center;
+  }
+
+  .result-count {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 65vh;
+  }
+
+  table.main-table { width: 100%; border-collapse: collapse; }
+
+  table.main-table th {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  table.main-table th:hover { color: var(--gold); }
+  table.main-table th.sorted { color: var(--gold-light); }
+
+  table.main-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(42,47,66,0.4);
+    vertical-align: middle;
+  }
+
+  table.main-table tr:hover td { background: var(--bg-hover); }
+  table.main-table tr:last-child td { border-bottom: none; }
+
+  .item-name {
+    font-weight: 500;
+    color: var(--gold-light);
+    white-space: nowrap;
+  }
+
+  .item-name.quality-uncommon { color: var(--green); }
+  .item-name.quality-rare     { color: var(--blue); }
+  .item-name.quality-epic     { color: var(--purple); }
+  .item-name.quality-legendary { color: var(--orange); }
+
+  .player-name { color: var(--text-bright); font-weight: 500; }
+  .instance-name { color: var(--text-dim); font-size: 12px; }
+  .boss-name-cell { color: var(--text); font-size: 12px; }
+
+  .vote-pip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(200,151,42,0.15);
+    color: var(--gold);
+    border: 1px solid var(--border-gold);
+  }
+
+  /* ── PLAYER LOOKUP ── */
+  .lookup-header {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .player-select-wrap { position: relative; }
+
+  select#player-select {
+    appearance: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-gold);
+    border-radius: 3px;
+    color: var(--gold-light);
+    font-family: var(--font-display);
+    font-size: 14px;
+    padding: 10px 40px 10px 16px;
+    min-width: 240px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  select#player-select:focus { border-color: var(--gold); }
+
+  .select-arrow {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+    pointer-events: none;
+    font-size: 12px;
+  }
+
+  .player-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+
+  .player-card-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-bright);
+  }
+
+  .player-card-class {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .player-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .player-stat { text-align: center; }
+  .player-stat-value {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .player-stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-top: 3px;
+  }
+
+  /* empty state row */
+  .empty-row td {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px !important;
+    font-size: 13px;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+  /* ── DIVIDER ── */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mt { margin-top: 24px; }
+
+  .full-panel { grid-column: 1 / -1; }
+
+  /* raid timeline */
+  .raid-row { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid rgba(42,47,66,0.5); }
+  .raid-row:last-child { border-bottom: none; }
+  .raid-date { font-family: var(--font-display); font-size: 12px; color: var(--gold); min-width: 70px; }
+  .raid-instance { font-size: 12px; color: var(--text-dim); flex: 1; }
+  .raid-items { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+
+  .tag { display: inline-block; font-size: 10px; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="guild-name">⚔ Thunderstrike</div>
+    <div class="guild-sub">Loot Council Records</div>
+  </div>
+  <div class="upload-area">
+    <span class="file-status" id="file-status">No file loaded</span>
+    <button class="btn btn-ghost" onclick="document.getElementById('file-input').click()">↑ Load .xlsx</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(event)">
+  </div>
+</header>
+
+<nav>
+  <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
+  <div class="tab" onclick="switchTab('history')">Loot History</div>
+  <div class="tab" onclick="switchTab('lookup')">Player Lookup</div>
+</nav>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="section-dashboard">
+    <div class="placeholder" id="dash-placeholder">
+      <div class="placeholder-icon">⚔️</div>
+      <h2>No Data Loaded</h2>
+      <p>Upload your RCLootCouncil .xlsx export using the button in the top-right to populate the dashboard.</p>
+    </div>
+    <div id="dash-content" style="display:none">
+      <div class="stats-grid" id="stat-cards"></div>
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-header">Items by Player</div>
+          <div class="panel-body" style="max-height:420px;overflow-y:auto">
+            <table class="dash-table" id="player-summary-table">
+              <thead><tr>
+                <th>Player</th><th>Class</th>
+                <th style="text-align:right">Total</th>
+                <th style="text-align:right">BiS</th>
+                <th style="text-align:right">Upgrade</th>
+                <th style="text-align:right">Offspec</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Items by Boss</div>
+          <div class="panel-body" style="max-height:420px;overflow-y:auto" id="boss-chart"></div>
+        </div>
+        <div class="panel full-panel">
+          <div class="panel-header">Raids at a Glance</div>
+          <div class="panel-body" id="raid-timeline"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOOT HISTORY -->
+  <div class="section" id="section-history">
+    <div class="placeholder" id="hist-placeholder">
+      <div class="placeholder-icon">📜</div>
+      <h2>No Data Loaded</h2>
+      <p>Upload your RCLootCouncil .xlsx export to browse the full loot history.</p>
+    </div>
+    <div id="hist-content" style="display:none">
+      <div class="filters">
+        <input class="filter-input" id="hist-search" placeholder="Search item, player, boss…" oninput="renderHistory()" style="min-width:220px">
+        <select class="filter-input" id="hist-class" onchange="renderHistory()"><option value="">All Classes</option></select>
+        <select class="filter-input" id="hist-response" onchange="renderHistory()"><option value="">All Responses</option></select>
+        <select class="filter-input" id="hist-instance" onchange="renderHistory()"><option value="">All Instances</option></select>
+        <span class="result-count" id="hist-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="main-table" id="hist-table">
+          <thead><tr>
+            <th onclick="sortHistory('date')" id="th-date">Date ↕</th>
+            <th onclick="sortHistory('player')" id="th-player">Player ↕</th>
+            <th onclick="sortHistory('item')" id="th-item">Item ↕</th>
+            <th onclick="sortHistory('response')" id="th-response">Response ↕</th>
+            <th onclick="sortHistory('votes')" id="th-votes">Votes ↕</th>
+            <th>Class</th>
+            <th>Instance</th>
+            <th>Boss</th>
+            <th>Previous Gear</th>
+          </tr></thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER LOOKUP -->
+  <div class="section" id="section-lookup">
+    <div class="placeholder" id="look-placeholder">
+      <div class="placeholder-icon">🔍</div>
+      <h2>No Data Loaded</h2>
+      <p>Upload your RCLootCouncil .xlsx export to look up individual player loot history.</p>
+    </div>
+    <div id="look-content" style="display:none">
+      <div class="lookup-header">
+        <div class="player-select-wrap">
+          <select id="player-select" onchange="renderLookup()">
+            <option value="">— Select a player —</option>
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+      </div>
+      <div id="player-card" style="display:none"></div>
+      <div class="table-wrap" id="lookup-table-wrap" style="display:none">
+        <table class="main-table">
+          <thead><tr>
+            <th>Item</th>
+            <th>Response</th>
+            <th>Votes</th>
+            <th>Instance</th>
+            <th>Boss</th>
+            <th>Date</th>
+            <th>Previous Gear</th>
+          </tr></thead>
+          <tbody id="lookup-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let allRows = [];
+let sortCol = 'date';
+let sortDir = -1;
+
+// ── EXCEL DATE → readable ──
+function excelDateToStr(serial) {
+  if (!serial || isNaN(serial)) return '—';
+  const d = new Date(Math.round((serial - 25569) * 86400 * 1000));
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ── STRIP [] FROM ITEM NAMES ──
+function cleanItem(name) {
+  if (!name) return '—';
+  return String(name).replace(/^\[|\]$/g, '');
+}
+
+// ── RESPONSE CATEGORY ──
+function responseClass(r) {
+  if (!r) return 'resp-other';
+  const low = r.toLowerCase();
+  if (low === 'bis' || low === 'best in slot') return 'resp-bis';
+  if (low.includes('2nd') || low.includes('second')) return 'resp-2ndbis';
+  if (low === 'upgrade') return 'resp-upgrade';
+  if (low.includes('offspec') || low.includes('off')) return 'resp-offspec';
+  if (low === 'pass' || low === 'passen') return 'resp-pass';
+  return 'resp-other';
+}
+
+function responseLabel(r) {
+  if (!r) return '—';
+  const low = r.toLowerCase();
+  if (low === 'bis') return 'BiS';
+  if (low.includes('2nd') || low.includes('second')) return '2nd BiS';
+  if (low === 'upgrade') return 'Upgrade';
+  if (low.includes('offspec')) return 'Offspec';
+  if (low === 'pass' || low === 'passen') return 'Pass';
+  return r;
+}
+
+// ── CLASS COLOR ──
+function classBadge(cls) {
+  if (!cls) return '';
+  const c = cls.toUpperCase().replace(/\s+/g,'');
+  return `<span class="class-badge class-${c}">${cls}</span>`;
+}
+
+// ── HANDLE FILE UPLOAD ──
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('file-status').textContent = 'Loading…';
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('loot') && s.toLowerCase().includes('hist')) || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      allRows = raw.map(r => ({
+        player:    r['player'] || r['Player'] || '',
+        date:      r['date']   || r['Date']   || '',
+        item:      cleanItem(r['item'] || r['Item'] || ''),
+        itemID:    r['itemID'] || '',
+        response:  r['response'] || r['Response'] || '',
+        votes:     parseInt(r['votes'] || r['Votes'] || 0) || 0,
+        cls:       (r['class'] || r['Class'] || '').toUpperCase(),
+        instance:  r['instance'] || r['Instance'] || '',
+        boss:      r['boss'] || r['Boss'] || '',
+        gear1:     cleanItem(r['gear1'] || r['Gear1'] || ''),
+        gear2:     cleanItem(r['gear2'] || r['Gear2'] || ''),
+        raidDate:  r['RaidDate'] || r['date'] || '',
+      })).filter(r => r.player && r.item && r.item !== '—');
+
+      document.getElementById('file-status').textContent = `${file.name} (${allRows.length} entries)`;
+      buildUI();
+    } catch(err) {
+      document.getElementById('file-status').textContent = 'Error reading file';
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── BUILD ALL UI ──
+function buildUI() {
+  buildDashboard();
+  buildFilters();
+  renderHistory();
+  buildPlayerSelect();
+
+  ['dashboard','history','lookup'].forEach(id => {
+    document.getElementById(id + '-placeholder').style.display = 'none';
+    document.getElementById(id === 'dashboard' ? 'dash-content' : id === 'history' ? 'hist-content' : 'look-content').style.display = 'block';
+  });
+}
+
+// ── DASHBOARD ──
+function buildDashboard() {
+  const players = [...new Set(allRows.map(r => r.player))];
+  const raids   = [...new Set(allRows.map(r => String(r.raidDate || r.date)))].filter(Boolean);
+  const bosses  = [...new Set(allRows.map(r => r.boss))].filter(Boolean);
+
+  const dates = allRows.map(r => r.date).filter(d => d && !isNaN(d));
+  const first = Math.min(...dates);
+  const last  = Math.max(...dates);
+
+  document.getElementById('stat-cards').innerHTML = [
+    ['Total Items', allRows.length],
+    ['Players', players.length],
+    ['Raid Nights', raids.length],
+    ['Bosses Looted', bosses.length],
+    ['First Raid', excelDateToStr(first)],
+    ['Last Raid', excelDateToStr(last)],
+  ].map(([label, val]) => `
+    <div class="stat-card">
+      <div class="stat-value">${val}</div>
+      <div class="stat-label">${label}</div>
+    </div>
+  `).join('');
+
+  // Player summary
+  const playerMap = {};
+  allRows.forEach(r => {
+    if (!playerMap[r.player]) playerMap[r.player] = { total:0, bis:0, upgrade:0, offspec:0, cls: r.cls };
+    playerMap[r.player].total++;
+    const rc = responseClass(r.response);
+    if (rc === 'resp-bis') playerMap[r.player].bis++;
+    if (rc === 'resp-upgrade') playerMap[r.player].upgrade++;
+    if (rc === 'resp-offspec') playerMap[r.player].offspec++;
+  });
+
+  const tbody = document.querySelector('#player-summary-table tbody');
+  tbody.innerHTML = Object.entries(playerMap)
+    .sort((a,b) => b[1].total - a[1].total)
+    .map(([name, d]) => `<tr onclick="jumpToPlayer('${name}')">
+      <td class="player-name">${name.split('-')[0]}</td>
+      <td>${classBadge(d.cls)}</td>
+      <td class="num-cell">${d.total}</td>
+      <td class="num-cell resp-bis">${d.bis}</td>
+      <td class="num-cell resp-upgrade">${d.upgrade}</td>
+      <td class="num-cell resp-offspec">${d.offspec}</td>
+    </tr>`).join('');
+
+  // Boss chart
+  const bossMap = {};
+  allRows.forEach(r => { if (r.boss) bossMap[r.boss] = (bossMap[r.boss]||0) + 1; });
+  const maxBoss = Math.max(...Object.values(bossMap));
+  document.getElementById('boss-chart').innerHTML = Object.entries(bossMap)
+    .sort((a,b) => b[1]-a[1])
+    .map(([boss, count]) => `
+      <div class="boss-row">
+        <span class="boss-name">${boss}</span>
+        <div class="boss-bar-wrap"><div class="boss-bar" style="width:${Math.round(count/maxBoss*100)}%"></div></div>
+        <span class="boss-count">${count}</span>
+      </div>`).join('');
+
+  // Raid timeline
+  const raidMap = {};
+  allRows.forEach(r => {
+    const key = String(r.raidDate || r.date);
+    if (!raidMap[key]) raidMap[key] = { count:0, instance: r.instance };
+    raidMap[key].count++;
+  });
+  document.getElementById('raid-timeline').innerHTML = Object.entries(raidMap)
+    .sort((a,b) => parseFloat(a[0]) - parseFloat(b[0]))
+    .map(([date, d]) => `
+      <div class="raid-row">
+        <span class="raid-date">${excelDateToStr(parseFloat(date))}</span>
+        <span class="raid-instance">${d.instance}</span>
+        <span class="raid-items">${d.count} items</span>
+      </div>`).join('');
+}
+
+// ── LOOT HISTORY FILTERS ──
+function buildFilters() {
+  const classes   = [...new Set(allRows.map(r => r.cls))].filter(Boolean).sort();
+  const responses = [...new Set(allRows.map(r => responseLabel(r.response)))].filter(r => r !== '—').sort();
+  const instances = [...new Set(allRows.map(r => r.instance))].filter(Boolean).sort();
+
+  const classEl = document.getElementById('hist-class');
+  classEl.innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option>${c}</option>`).join('');
+
+  const respEl = document.getElementById('hist-response');
+  respEl.innerHTML = '<option value="">All Responses</option>' + responses.map(r => `<option>${r}</option>`).join('');
+
+  const instEl = document.getElementById('hist-instance');
+  instEl.innerHTML = '<option value="">All Instances</option>' + instances.map(i => `<option>${i}</option>`).join('');
+}
+
+// ── RENDER LOOT HISTORY ──
+let histSortCol = 'date', histSortDir = -1;
+
+function sortHistory(col) {
+  if (histSortCol === col) histSortDir *= -1;
+  else { histSortCol = col; histSortDir = -1; }
+  document.querySelectorAll('.main-table th').forEach(th => th.classList.remove('sorted'));
+  const el = document.getElementById('th-' + col);
+  if (el) el.classList.add('sorted');
+  renderHistory();
+}
+
+function renderHistory() {
+  const search = document.getElementById('hist-search').value.toLowerCase();
+  const cls    = document.getElementById('hist-class').value;
+  const resp   = document.getElementById('hist-response').value;
+  const inst   = document.getElementById('hist-instance').value;
+
+  let rows = allRows.filter(r => {
+    if (cls  && r.cls !== cls) return false;
+    if (resp && responseLabel(r.response) !== resp) return false;
+    if (inst && r.instance !== inst) return false;
+    if (search) {
+      const hay = [r.player, r.item, r.boss, r.instance].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    let av = a[histSortCol], bv = b[histSortCol];
+    if (histSortCol === 'votes') { av = parseInt(av)||0; bv = parseInt(bv)||0; }
+    if (histSortCol === 'date')  { av = parseFloat(av)||0; bv = parseFloat(bv)||0; }
+    if (av < bv) return -histSortDir;
+    if (av > bv) return histSortDir;
+    return 0;
+  });
+
+  document.getElementById('hist-count').textContent = `${rows.length} entries`;
+
+  const tbody = document.getElementById('hist-body');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No entries match your filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const gear = [r.gear1, r.gear2].filter(g => g && g !== '—').join(', ') || '—';
+    const respLabel = responseLabel(r.response);
+    const respCls   = responseClass(r.response);
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--text-dim);font-size:12px">${excelDateToStr(parseFloat(r.date))}</td>
+      <td class="player-name">${r.player.split('-')[0]}</td>
+      <td class="item-name">${r.item}</td>
+      <td><span class="${respCls}">${respLabel}</span></td>
+      <td style="text-align:center">${r.votes > 0 ? `<span class="vote-pip">${r.votes}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+      <td>${classBadge(r.cls)}</td>
+      <td class="instance-name">${r.instance}</td>
+      <td class="boss-name-cell">${r.boss}</td>
+      <td style="color:var(--text-dim);font-size:12px">${gear}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PLAYER LOOKUP ──
+function buildPlayerSelect() {
+  const players = [...new Set(allRows.map(r => r.player))].sort();
+  const el = document.getElementById('player-select');
+  el.innerHTML = '<option value="">— Select a player —</option>' + players.map(p => `<option value="${p}">${p.split('-')[0]}</option>`).join('');
+}
+
+function jumpToPlayer(name) {
+  switchTab('lookup');
+  const el = document.getElementById('player-select');
+  el.value = name;
+  renderLookup();
+}
+
+function renderLookup() {
+  const player = document.getElementById('player-select').value;
+  const cardEl = document.getElementById('player-card');
+  const tableWrap = document.getElementById('lookup-table-wrap');
+
+  if (!player) {
+    cardEl.style.display = 'none';
+    tableWrap.style.display = 'none';
+    return;
+  }
+
+  const rows = allRows.filter(r => r.player === player);
+  if (!rows.length) return;
+
+  const cls = rows[0].cls;
+  const bis = rows.filter(r => responseClass(r.response) === 'resp-bis').length;
+  const upgrades = rows.filter(r => responseClass(r.response) === 'resp-upgrade').length;
+  const offspec = rows.filter(r => responseClass(r.response) === 'resp-offspec').length;
+
+  cardEl.style.display = 'flex';
+  cardEl.className = 'player-card';
+  cardEl.innerHTML = `
+    <div>
+      <div class="player-card-name">${player.split('-')[0]}</div>
+      <div class="player-card-class">${classBadge(cls)}</div>
+    </div>
+    <div class="player-stats">
+      <div class="player-stat"><div class="player-stat-value">${rows.length}</div><div class="player-stat-label">Total Items</div></div>
+      <div class="player-stat"><div class="player-stat-value resp-bis" style="font-family:var(--font-display)">${bis}</div><div class="player-stat-label">BiS</div></div>
+      <div class="player-stat"><div class="player-stat-value resp-upgrade" style="font-family:var(--font-display)">${upgrades}</div><div class="player-stat-label">Upgrades</div></div>
+      <div class="player-stat"><div class="player-stat-value resp-offspec" style="font-family:var(--font-display)">${offspec}</div><div class="player-stat-label">Offspec</div></div>
+    </div>
+  `;
+
+  tableWrap.style.display = 'block';
+  const tbody = document.getElementById('lookup-body');
+  tbody.innerHTML = rows
+    .sort((a,b) => parseFloat(b.date) - parseFloat(a.date))
+    .map(r => {
+      const gear = [r.gear1, r.gear2].filter(g => g && g !== '—').join(', ') || '—';
+      const respLabel = responseLabel(r.response);
+      const respCls   = responseClass(r.response);
+      return `<tr>
+        <td class="item-name">${r.item}</td>
+        <td><span class="${respCls}">${respLabel}</span></td>
+        <td style="text-align:center">${r.votes > 0 ? `<span class="vote-pip">${r.votes}</span>` : '—'}</td>
+        <td class="instance-name">${r.instance}</td>
+        <td class="boss-name-cell">${r.boss}</td>
+        <td style="white-space:nowrap;color:var(--text-dim);font-size:12px">${excelDateToStr(parseFloat(r.date))}</td>
+        <td style="color:var(--text-dim);font-size:12px">${gear}</td>
+      </tr>`;
+    }).join('');
+}
+
+// ── TAB SWITCHING ──
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['dashboard','history','lookup'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>
