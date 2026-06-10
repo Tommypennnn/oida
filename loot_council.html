@@ -786,9 +786,13 @@ function buildUI() {
   renderHistory();
   buildPlayerSelect();
 
-  ['dashboard','history','lookup'].forEach(id => {
-    document.getElementById(id + '-placeholder').style.display = 'none';
-    document.getElementById(id === 'dashboard' ? 'dash-content' : id === 'history' ? 'hist-content' : 'look-content').style.display = 'block';
+  [
+    ['dash-placeholder', 'dash-content'],
+    ['hist-placeholder',  'hist-content'],
+    ['look-placeholder',  'look-content'],
+  ].forEach(([ph, ct]) => {
+    document.getElementById(ph).style.display = 'none';
+    document.getElementById(ct).style.display = 'block';
   });
 }
 
