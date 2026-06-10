@@ -712,7 +712,21 @@ function classBadge(cls) {
   const c = cls.toUpperCase().replace(/\s+/g,'');
   return `<span class="class-badge class-${c}">${cls}</span>`;
 }
+// Auto-load xlsx from GitHub
+const XLSX_URL = 'https://raw.githubusercontent.com/tommypennnn/oida/main/RC_Lootcouncil.xlsx';
 
+async function autoLoad() {
+  try {
+    document.getElementById('file-status').textContent = 'Loading data…';
+    const res = await fetch(XLSX_URL);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    processWorkbook(wb, 'RC_Lootcouncil.xlsx');
+  } catch(e) {
+    document.getElementById('file-status').textContent = 'Auto-load failed — use ↑ Load .xlsx';
+  }
+}
+window.addEventListener('DOMContentLoaded', autoLoad);
 // ── HANDLE FILE UPLOAD ──
 function handleFile(e) {
   const file = e.target.files[0];
