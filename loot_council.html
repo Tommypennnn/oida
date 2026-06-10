@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thunderstrike — Loot Council</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg-deep:    #0d0f14;
@@ -713,6 +713,24 @@ function classBadge(cls) {
   return `<span class="class-badge class-${c}">${cls}</span>`;
 }
 
+// ── AUTO-LOAD FROM GITHUB ──
+const XLSX_URL = 'https://raw.githubusercontent.com/tommypennnn/oida/main/RC_Lootcouncil.xlsx';
+
+async function autoLoad() {
+  try {
+    document.getElementById('file-status').textContent = 'Loading data…';
+    const res = await fetch(XLSX_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    processWorkbook(wb, 'RC_Lootcouncil.xlsx');
+  } catch(e) {
+    document.getElementById('file-status').textContent = 'Auto-load failed — use ↑ Load .xlsx';
+    console.error('Auto-load error:', e);
+  }
+}
+window.addEventListener('DOMContentLoaded', autoLoad);
+
 // ── PARSE WORKBOOK (shared by upload and auto-load) ──
 function processWorkbook(wb, filename) {
   const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('loot') && s.toLowerCase().includes('hist')) || wb.SheetNames[0];
@@ -737,21 +755,7 @@ function processWorkbook(wb, filename) {
   document.getElementById('file-status').textContent = `${filename} · ${allRows.length} entries`;
   buildUI();
 }
-// Auto-load xlsx from GitHub
-const XLSX_URL = 'https://raw.githubusercontent.com/tommypennnn/oida/main/RC_Lootcouncil.xlsx';
 
-async function autoLoad() {
-  try {
-    document.getElementById('file-status').textContent = 'Loading data…';
-    const res = await fetch(XLSX_URL);
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    processWorkbook(wb, 'RC_Lootcouncil.xlsx');
-  } catch(e) {
-    document.getElementById('file-status').textContent = 'Auto-load failed — use ↑ Load .xlsx';
-  }
-}
-window.addEventListener('DOMContentLoaded', autoLoad);
 // ── HANDLE FILE UPLOAD ──
 function handleFile(e) {
   const file = e.target.files[0];
