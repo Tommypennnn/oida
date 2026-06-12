@@ -177,6 +177,52 @@
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
   ::-webkit-scrollbar-thumb:hover{background:#c4c7d4}
+
+  /* ── COUNCIL TOOL ── */
+  .council-layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.council-layout{grid-template-columns:1fr}}
+  .council-form{background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:16px}
+  .council-form h2{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+  .council-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:5px}
+  .council-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:8px 12px;outline:none;transition:border-color .15s}
+  .council-input:focus{border-color:var(--accent);background:var(--bg-white)}
+  .contestant-list{display:flex;flex-direction:column;gap:6px;min-height:40px}
+  .contestant-chip{display:flex;align-items:center;justify-content:space-between;background:var(--accent-dim);border:1px solid #d0d4fa;border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;font-weight:600;color:var(--accent-dark)}
+  .contestant-chip .chip-right{display:flex;align-items:center;gap:8px}
+  .contestant-chip .chip-class{font-size:10px;font-weight:500;color:var(--accent);opacity:.75}
+  .chip-remove{background:none;border:none;cursor:pointer;color:#a5adf5;font-size:14px;line-height:1;padding:0 2px;transition:color .1s}
+  .chip-remove:hover{color:var(--red)}
+  .add-contestant-row{display:flex;gap:6px}
+  .add-contestant-row .council-input{flex:1}
+  .btn-add{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+  .btn-add:hover{background:var(--accent-dark)}
+  .btn-decide{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-decide:hover{background:var(--accent-dark)}
+  .btn-decide:disabled{background:#c4c7d4;cursor:not-allowed}
+  .council-result{background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-sm);min-height:300px;display:flex;flex-direction:column;gap:16px}
+  .council-result.empty{align-items:center;justify-content:center;text-align:center;border-style:dashed}
+  .result-icon{font-size:48px;opacity:.2}
+  .result-empty-title{font-size:15px;font-weight:600;color:var(--text-mid)}
+  .result-empty-sub{font-size:13px;color:var(--text-dim);max-width:300px;line-height:1.6}
+  .winner-banner{background:linear-gradient(135deg,var(--accent-dim),#e0e3ff);border:1px solid #c7cbf9;border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;gap:16px}
+  .winner-trophy{font-size:36px;line-height:1}
+  .winner-name{font-size:22px;font-weight:800;color:var(--accent-dark);letter-spacing:-0.02em}
+  .winner-sub{font-size:12px;color:var(--accent);margin-top:2px;font-weight:500}
+  .result-reasoning{font-size:13px;color:var(--text-mid);line-height:1.7;white-space:pre-wrap}
+  .contestant-scores{display:flex;flex-direction:column;gap:8px}
+  .score-row{display:flex;align-items:center;gap:10px}
+  .score-name{font-size:13px;font-weight:600;min-width:110px;color:var(--text)}
+  .score-bar-wrap{flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden}
+  .score-bar{height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
+  .score-bar.winner-bar{background:linear-gradient(90deg,var(--accent),#7c8ff7)}
+  .score-val{font-size:12px;font-weight:700;color:var(--text-dim);min-width:36px;text-align:right}
+  .thinking-dots{display:flex;gap:5px;align-items:center;justify-content:center;padding:40px}
+  .thinking-dots span{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite ease-in-out}
+  .thinking-dots span:nth-child(2){animation-delay:.15s}
+  .thinking-dots span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:.5}40%{transform:scale(1);opacity:1}}
+  .result-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)}
+  .no-data-warning{font-size:12px;color:var(--orange);background:var(--orange-bg);border-radius:var(--radius-sm);padding:8px 12px}
 </style>
 </head>
 <body>
@@ -192,6 +238,7 @@
   <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
   <div class="tab" onclick="switchTab('history')">Loot History</div>
   <div class="tab" onclick="switchTab('lookup')">Player Lookup</div>
+  <div class="tab" onclick="switchTab('council')">⚖️ Council Tool</div>
 </nav>
 
 <main>
@@ -222,11 +269,19 @@
 
       <!-- Row 2 -->
       <div class="dash-grid" style="margin-bottom:16px">
-        <!-- Loot over time -->
         <div class="panel full-panel">
-          <div class="panel-header">Items Awarded Over Time</div>
-          <div class="chart-wrap" style="padding:16px 20px">
-            <canvas id="line-canvas" width="900" height="180" style="width:100%;height:180px"></canvas>
+          <div class="panel-header">🎁 Top 8 Most Dropped Items</div>
+          <div style="overflow-x:auto">
+            <table class="dash-table" id="top-items-table">
+              <thead><tr>
+                <th style="width:36px">#</th>
+                <th>Item</th>
+                <th>Boss</th>
+                <th>Instance</th>
+                <th style="text-align:right">Times Dropped</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -342,6 +397,47 @@
     </div>
   </div>
 
+  <!-- COUNCIL TOOL -->
+  <div class="section" id="section-council">
+    <div class="council-layout">
+
+      <!-- Left: form -->
+      <div class="council-form">
+        <h2>⚖️ Loot Decision Helper</h2>
+
+        <div>
+          <div class="council-label">Item Being Awarded</div>
+          <input class="council-input" id="council-item" placeholder="e.g. Shadowmourne, Val'anyr…" />
+        </div>
+
+        <div>
+          <div class="council-label">Contestants</div>
+          <div class="contestant-list" id="contestant-list">
+            <div id="no-contestants" style="font-size:12px;color:var(--text-dim);padding:4px 0">No contestants added yet.</div>
+          </div>
+          <div class="add-contestant-row" style="margin-top:8px">
+            <input class="council-input" id="contestant-input" placeholder="Type player name…" onkeydown="if(event.key==='Enter')addContestant()" list="player-datalist" />
+            <datalist id="player-datalist"></datalist>
+            <button class="btn-add" onclick="addContestant()">+ Add</button>
+          </div>
+          <div id="contestant-warning" class="no-data-warning" style="display:none;margin-top:8px"></div>
+        </div>
+
+        <button class="btn-decide" id="btn-decide" onclick="runCouncil()" disabled>
+          ⚖️ Recommend Winner
+        </button>
+      </div>
+
+      <!-- Right: result -->
+      <div class="council-result empty" id="council-result">
+        <div class="result-icon">⚖️</div>
+        <div class="result-empty-title">No decision yet</div>
+        <div class="result-empty-sub">Add at least 2 contestants and an item name, then click "Recommend Winner".</div>
+      </div>
+
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -437,6 +533,7 @@ function buildUI() {
   buildFilters();
   renderHistory();
   buildPlayerSelect();
+  populateDatalist();
   [
     ['dash-placeholder','dash-content'],
     ['hist-placeholder','hist-content'],
@@ -488,81 +585,6 @@ function buildClassBreakdown(classMap, allRows) {
         <div class="cls-players">${chips}</div>
       </div>`;
   }).join('');
-}
-
-// ── LINE CHART ──
-function drawLineChart(raidData) {
-  const canvas = document.getElementById('line-canvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || canvas.width;
-  canvas.width = W;
-  const H = 180;
-  canvas.height = H;
-  ctx.clearRect(0, 0, W, H);
-
-  const pad = { top:20, right:20, bottom:36, left:40 };
-  const cw = W - pad.left - pad.right;
-  const ch = H - pad.top - pad.bottom;
-
-  const entries = Object.entries(raidData).sort((a,b) => parseFloat(a[0]) - parseFloat(b[0]));
-  const values = entries.map(e => e[1].count);
-  const maxV = Math.max(...values);
-  const n = entries.length;
-
-  // Grid lines
-  ctx.strokeStyle = '#e4e6f0';
-  ctx.lineWidth = 1;
-  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
-    const y = pad.top + ch * (1 - t);
-    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
-    ctx.fillStyle = '#9ca3af'; ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxV * t), pad.left - 6, y + 3);
-  });
-
-  // Line + fill
-  const pts = entries.map((e, i) => ({
-    x: pad.left + (n === 1 ? cw / 2 : (i / (n-1)) * cw),
-    y: pad.top + ch * (1 - e[1].count / maxV)
-  }));
-
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
-  grad.addColorStop(0, 'rgba(91,106,240,0.2)');
-  grad.addColorStop(1, 'rgba(91,106,240,0)');
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pad.top + ch);
-  pts.forEach(p => ctx.lineTo(p.x, p.y));
-  ctx.lineTo(pts[pts.length-1].x, pad.top + ch);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  ctx.strokeStyle = '#5b6af0';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  pts.forEach((p,i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-  ctx.stroke();
-
-  // Dots + labels
-  pts.forEach((p, i) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
-    ctx.fillStyle = '#5b6af0';
-    ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-
-    // Value label
-    ctx.fillStyle = '#374151'; ctx.font = 'bold 11px Inter,sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(values[i], p.x, p.y - 10);
-
-    // Date label
-    ctx.fillStyle = '#9ca3af'; ctx.font = '10px Inter,sans-serif';
-    const dateStr = excelDateToStr(parseFloat(entries[i][0]));
-    ctx.fillText(dateStr, p.x, H - pad.bottom + 14);
-  });
 }
 
 // ── TOP 5 LEADERBOARD ──
@@ -728,11 +750,38 @@ function buildDashboard() {
   // New charts — defer slightly so canvas is in DOM
   requestAnimationFrame(() => {
     buildClassBreakdown(classMap, allRows);
-    drawLineChart(raidMap);
     buildLeaderboard(playerMap);
     buildFairness(playerMap);
     buildContested(bossVotes);
+    buildTopItems();
   });
+}
+
+// ── TOP 8 MOST DROPPED ITEMS ──
+function buildTopItems() {
+  const itemMap = {};
+  allRows.forEach(r => {
+    if (!r.item || r.item === '—') return;
+    if (!itemMap[r.item]) itemMap[r.item] = { count: 0, boss: r.boss, instance: r.instance };
+    itemMap[r.item].count++;
+  });
+
+  const top8 = Object.entries(itemMap)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 8);
+
+  const medals = ['🥇','🥈','🥉'];
+  const tbody = document.querySelector('#top-items-table tbody');
+  tbody.innerHTML = top8.map(([item, d], i) => {
+    const rank = medals[i] || `<span style="color:var(--text-dim);font-weight:600">${i+1}</span>`;
+    return `<tr>
+      <td style="text-align:center;font-size:14px">${rank}</td>
+      <td class="item-name">${item}</td>
+      <td class="text-dim">${d.boss || '—'}</td>
+      <td class="text-dim">${d.instance || '—'}</td>
+      <td class="num-cell">${d.count}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── FILTERS ──
@@ -864,10 +913,203 @@ function renderLookup() {
 // ── TAB SWITCHING ──
 function switchTab(id) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['dashboard','history','lookup'][i] === id);
+    t.classList.toggle('active', ['dashboard','history','lookup','council'][i] === id);
   });
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
+}
+
+// ── COUNCIL TOOL ──
+let contestants = [];
+
+function populateDatalist() {
+  const players = [...new Set(allRows.map(r => r.player.split('-')[0]))].sort();
+  document.getElementById('player-datalist').innerHTML = players.map(p => `<option value="${p}">`).join('');
+}
+
+function addContestant() {
+  const input = document.getElementById('contestant-input');
+  const raw = input.value.trim();
+  if (!raw) return;
+
+  // Match against known players (case-insensitive, strip realm)
+  const match = allRows.find(r => r.player.split('-')[0].toLowerCase() === raw.toLowerCase());
+  const fullName = match ? match.player : raw;
+  const shortName = fullName.split('-')[0];
+
+  if (contestants.find(c => c.short.toLowerCase() === shortName.toLowerCase())) {
+    input.value = ''; return;
+  }
+
+  const cls = match ? (allRows.find(r => r.player === fullName)?.cls || '') : '';
+  contestants.push({ full: fullName, short: shortName, cls });
+  input.value = '';
+  renderContestants();
+  updateDecideBtn();
+}
+
+function removeContestant(short) {
+  contestants = contestants.filter(c => c.short !== short);
+  renderContestants();
+  updateDecideBtn();
+}
+
+function renderContestants() {
+  const list = document.getElementById('contestant-list');
+  const none = document.getElementById('no-contestants');
+  if (!contestants.length) {
+    list.innerHTML = '';
+    list.appendChild(none);
+    none.style.display = 'block';
+    return;
+  }
+  none.style.display = 'none';
+  list.innerHTML = contestants.map(c => {
+    const color = CLASS_COLORS[c.cls] || '#9ca3af';
+    const clsLabel = c.cls ? c.cls.charAt(0) + c.cls.slice(1).toLowerCase() : 'Unknown';
+    return `<div class="contestant-chip">
+      <span>${c.short}</span>
+      <span class="chip-right">
+        <span class="chip-class" style="color:${color}">${clsLabel}</span>
+        <button class="chip-remove" onclick="removeContestant('${c.short}')" title="Remove">✕</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function updateDecideBtn() {
+  const item = document.getElementById('council-item').value.trim();
+  const btn = document.getElementById('btn-decide');
+  btn.disabled = contestants.length < 2 || !item;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('council-item').addEventListener('input', updateDecideBtn);
+});
+
+function getPlayerStats(fullName) {
+  const rows = allRows.filter(r => r.player === fullName);
+  if (!rows.length) return null;
+  const total  = rows.length;
+  const bis    = rows.filter(r => responseClass(r.response) === 'resp-bis').length;
+  const bis2   = rows.filter(r => responseClass(r.response) === 'resp-2ndbis').length;
+  const upg    = rows.filter(r => responseClass(r.response) === 'resp-upgrade').length;
+  const off    = rows.filter(r => responseClass(r.response) === 'resp-offspec').length;
+  const dates  = rows.map(r => parseFloat(r.date)).filter(d => !isNaN(d)).sort((a,b) => b-a);
+  const lastItem = dates.length ? excelDateToStr(dates[0]) : 'unknown';
+  const daysSinceLast = dates.length ? Math.round((Date.now()/86400000) - (dates[0] - 25569)) : 9999;
+  const recentItems = rows
+    .sort((a,b) => parseFloat(b.date) - parseFloat(a.date))
+    .slice(0,5)
+    .map(r => `${r.item} (${responseLabel(r.response)}, ${excelDateToStr(parseFloat(r.date))})`);
+  return { total, bis, bis2, upg, off, lastItem, daysSinceLast, recentItems, cls: rows[0].cls };
+}
+
+async function runCouncil() {
+  const item = document.getElementById('council-item').value.trim();
+  const resultEl = document.getElementById('council-result');
+  const btn = document.getElementById('btn-decide');
+
+  // Show thinking state
+  resultEl.className = 'council-result';
+  resultEl.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div>`;
+  btn.disabled = true;
+
+  // Build context for each contestant
+  const profiles = contestants.map(c => {
+    const stats = getPlayerStats(c.full);
+    if (!stats) return `${c.short} (${c.cls || 'Unknown class'}): No loot history found in records.`;
+    return `${c.short} (${stats.cls || 'Unknown class'}):
+  - Total items received: ${stats.total}
+  - BiS: ${stats.bis}, 2nd BiS: ${stats.bis2}, Upgrades: ${stats.upg}, Offspec: ${stats.off}
+  - Last item received: ${stats.lastItem} (~${stats.daysSinceLast} days ago)
+  - Recent items: ${stats.recentItems.join('; ') || 'none'}`;
+  }).join('\n\n');
+
+  const prompt = `You are an expert World of Warcraft loot council advisor for the guild "Oida". Based on the loot history data below, recommend which player most deserves the item "${item}".
+
+Consider:
+- Who has received fewer items recently (loot fairness / priority)
+- Who has more BiS/upgrade needs vs offspec items
+- Time since last item (longer = higher priority)
+- Overall loot distribution balance
+
+Player profiles:
+${profiles}
+
+Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
+{
+  "winner": "PlayerName",
+  "scores": {"PlayerName": 85, "OtherPlayer": 60},
+  "reasoning": "2-3 sentence explanation of why the winner deserves the item, referencing specific data points."
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+    const result = JSON.parse(text);
+    renderCouncilResult(result, item);
+  } catch(e) {
+    resultEl.className = 'council-result empty';
+    resultEl.innerHTML = `<div class="result-icon">⚠️</div><div class="result-empty-title">Something went wrong</div><div class="result-empty-sub">${e.message}</div>`;
+  } finally {
+    updateDecideBtn();
+  }
+}
+
+function renderCouncilResult(result, item) {
+  const resultEl = document.getElementById('council-result');
+  const scores = result.scores || {};
+  const maxScore = Math.max(...Object.values(scores), 1);
+
+  const scoreRows = Object.entries(scores)
+    .sort((a,b) => b[1] - a[1])
+    .map(([name, score]) => {
+      const isWinner = name === result.winner;
+      const pct = Math.round(score / maxScore * 100);
+      const c = contestants.find(c => c.short === name);
+      const color = CLASS_COLORS[c?.cls] || '#5b6af0';
+      return `<div class="score-row">
+        <span class="score-name">${name}${isWinner ? ' 🏆' : ''}</span>
+        <div class="score-bar-wrap"><div class="score-bar${isWinner?' winner-bar':''}" style="width:${pct}%;${isWinner?'':'background:'+color+'88'}"></div></div>
+        <span class="score-val">${score}</span>
+      </div>`;
+    }).join('');
+
+  const winnerContestant = contestants.find(c => c.short === result.winner);
+  const winnerCls = winnerContestant?.cls || '';
+  const clsLabel = winnerCls ? winnerCls.charAt(0) + winnerCls.slice(1).toLowerCase() : '';
+
+  resultEl.className = 'council-result';
+  resultEl.innerHTML = `
+    <div>
+      <div class="result-section-title" style="margin-bottom:10px">Recommended for "${item}"</div>
+      <div class="winner-banner">
+        <div class="winner-trophy">🏆</div>
+        <div>
+          <div class="winner-name">${result.winner}</div>
+          <div class="winner-sub">${classBadge(winnerCls)} ${clsLabel}</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="result-section-title" style="margin-bottom:10px">Priority Scores</div>
+      <div class="contestant-scores">${scoreRows}</div>
+    </div>
+    <div>
+      <div class="result-section-title" style="margin-bottom:8px">Reasoning</div>
+      <div class="result-reasoning">${result.reasoning}</div>
+    </div>`;
 }
 </script>
 </body>
