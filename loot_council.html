@@ -94,7 +94,7 @@
   canvas{max-width:100%}
 
   /* ── TOP 5 LEADERBOARD ── */
-  .leaderboard{padding:8px 0}
+  .leaderboard{padding:8px 0;max-height:303px;overflow-y:auto}
   .lb-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background .1s}
   .lb-row:last-child{border-bottom:none}
   .lb-row:hover{background:var(--bg-hover)}
@@ -597,7 +597,7 @@ function buildClassBreakdown(classMap, allRows) {
 }
 
 // ── TOP 5 LEADERBOARD ──
-function renderLbRows(targetId, entries, maxBis, ranks) {
+function renderLbRows(targetId, entries, maxBis, ranks, medals = true) {
   document.getElementById(targetId).innerHTML = entries.map(([name, d], i) => {
     const shortName = name.split('-')[0];
     const color = CLASS_COLORS[d.cls] || '#5b6af0';
@@ -606,7 +606,7 @@ function renderLbRows(targetId, entries, maxBis, ranks) {
     const clsLabel = d.cls ? d.cls.charAt(0) + d.cls.slice(1).toLowerCase() : '';
     return `
       <div class="lb-row">
-        <span class="lb-rank r${i+1}">${ranks[i]}</span>
+        <span class="lb-rank ${medals ? 'r'+(i+1) : ''}">${ranks[i]}</span>
         <div class="lb-avatar" style="background:${color}">${init}</div>
         <div class="lb-info">
           <div class="lb-name">${shortName}</div>
@@ -624,15 +624,16 @@ function renderLbRows(targetId, entries, maxBis, ranks) {
 function buildLeaderboard(playerMap) {
   const all = Object.entries(playerMap).sort((a,b) => b[1].bis - a[1].bis);
   const maxBis = all[0]?.[1].bis || 1;
-
-  // Top 5
-  renderLbRows('leaderboard-wrap', all.slice(0,5), maxBis, ['🥇','🥈','🥉','4','5']);
-
-  // Bottom 5: fewest BiS items, ascending (lowest first), excluding anyone already in the top 5
-  const bottom = all.slice(-5).reverse();
   const n = all.length;
-  const bottomRanks = bottom.map((_, i) => String(n - i));
-  renderLbRows('bottom-leaderboard-wrap', bottom, maxBis, bottomRanks);
+
+  // Top: every player, most BiS first (scroll to see beyond top 5)
+  const topRanks = all.map((_, i) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
+  renderLbRows('leaderboard-wrap', all, maxBis, topRanks);
+
+  // Bottom: every player, fewest BiS first (scroll to see beyond bottom 5)
+  const asc = [...all].reverse();
+  const ascRanks = asc.map((_, i) => String(n - i));
+  renderLbRows('bottom-leaderboard-wrap', asc, maxBis, ascRanks, false);
 }
 
 // ── FAIRNESS BARS ──
