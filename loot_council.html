@@ -927,25 +927,48 @@ function populateDatalist() {
   document.getElementById('player-datalist').innerHTML = players.map(p => `<option value="${p}">`).join('');
 }
 
+function showCouncilWarning(msg) {
+  const warn = document.getElementById('contestant-warning');
+  if (!msg) { warn.style.display = 'none'; return; }
+  warn.textContent = msg;
+  warn.style.display = 'block';
+  clearTimeout(showCouncilWarning._t);
+  showCouncilWarning._t = setTimeout(() => { warn.style.display = 'none'; }, 4000);
+}
+
 function addContestant() {
-  const input = document.getElementById('contestant-input');
-  const raw = input.value.trim();
-  if (!raw) return;
+  try {
+    const input = document.getElementById('contestant-input');
+    const raw = input.value.trim();
+    if (!raw) return;
 
-  // Match against known players (case-insensitive, strip realm)
-  const match = allRows.find(r => r.player.split('-')[0].toLowerCase() === raw.toLowerCase());
-  const fullName = match ? match.player : raw;
-  const shortName = fullName.split('-')[0];
+    // Match against known players (case-insensitive, strip realm)
+    const match = allRows.find(r => r.player.split('-')[0].toLowerCase() === raw.toLowerCase());
+    const fullName = match ? match.player : raw;
+    const shortName = fullName.split('-')[0];
 
-  if (contestants.find(c => c.short.toLowerCase() === shortName.toLowerCase())) {
-    input.value = ''; return;
+    if (contestants.find(c => c.short.toLowerCase() === shortName.toLowerCase())) {
+      showCouncilWarning('"' + shortName + '" is already in the contestant list.');
+      input.value = '';
+      return;
+    }
+
+    if (!match) {
+      showCouncilWarning('"' + shortName + '" has no loot history in the records \u2014 added anyway.');
+    } else {
+      showCouncilWarning(null);
+    }
+
+    const cls = match ? (allRows.find(r => r.player === fullName)?.cls || '') : '';
+    contestants.push({ full: fullName, short: shortName, cls });
+    input.value = '';
+    input.focus();
+    renderContestants();
+    updateDecideBtn();
+  } catch (e) {
+    showCouncilWarning('Error adding contestant: ' + e.message);
+    console.error(e);
   }
-
-  const cls = match ? (allRows.find(r => r.player === fullName)?.cls || '') : '';
-  contestants.push({ full: fullName, short: shortName, cls });
-  input.value = '';
-  renderContestants();
-  updateDecideBtn();
 }
 
 function removeContestant(short) {
@@ -957,24 +980,22 @@ function removeContestant(short) {
 function renderContestants() {
   const list = document.getElementById('contestant-list');
   const none = document.getElementById('no-contestants');
+  // Remove existing chips without touching the none element
+  list.querySelectorAll('.contestant-chip').forEach(el => el.remove());
   if (!contestants.length) {
-    list.innerHTML = '';
-    list.appendChild(none);
     none.style.display = 'block';
     return;
   }
   none.style.display = 'none';
-  list.innerHTML = contestants.map(c => {
+  contestants.forEach(c => {
     const color = CLASS_COLORS[c.cls] || '#9ca3af';
     const clsLabel = c.cls ? c.cls.charAt(0) + c.cls.slice(1).toLowerCase() : 'Unknown';
-    return `<div class="contestant-chip">
-      <span>${c.short}</span>
-      <span class="chip-right">
-        <span class="chip-class" style="color:${color}">${clsLabel}</span>
-        <button class="chip-remove" onclick="removeContestant('${c.short}')" title="Remove">✕</button>
-      </span>
-    </div>`;
-  }).join('');
+    const chip = document.createElement('div');
+    chip.className = 'contestant-chip';
+    chip.innerHTML = '<span>' + c.short + '</span><span class="chip-right"><span class="chip-class" style="color:' + color + '">' + clsLabel + '</span><button class="chip-remove" title="Remove">\u2715</button></span>';
+    chip.querySelector('.chip-remove').addEventListener('click', () => removeContestant(c.short));
+    list.appendChild(chip);
+  });
 }
 
 function updateDecideBtn() {
