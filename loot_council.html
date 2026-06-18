@@ -374,10 +374,16 @@
       <div class="filters">
         <input class="filter-input" id="hist-search" placeholder="Search item, player, boss…" oninput="renderHistory()" style="min-width:220px">
         <select class="filter-input" id="hist-class" onchange="renderHistory()"><option value="">All Classes</option></select>
-        <select class="filter-input" id="hist-response" onchange="renderHistory()"><option value="">All Responses</option></select>
+        <div class="msel" id="hist-response-msel">
+          <button type="button" class="msel-btn" onclick="toggleMsel('response')">
+            <span id="hist-response-label">All Responses</span>
+            <span class="msel-caret">▾</span>
+          </button>
+          <div class="msel-panel" id="hist-response-panel"></div>
+        </div>
         <select class="filter-input" id="hist-instance" onchange="renderHistory()"><option value="">All Instances</option></select>
         <div class="msel" id="hist-date-msel">
-          <button type="button" class="msel-btn" id="hist-date-btn" onclick="toggleDateMsel()">
+          <button type="button" class="msel-btn" onclick="toggleMsel('date')">
             <span id="hist-date-label">All Dates</span>
             <span class="msel-caret">▾</span>
           </button>
@@ -835,65 +841,74 @@ function buildFilters() {
   const instances = [...new Set(allRows.map(r => r.instance))].filter(Boolean).sort();
   const dates     = [...new Set(allRows.map(r => parseFloat(r.date)))].filter(d => !isNaN(d)).sort((a,b) => b-a);
   document.getElementById('hist-class').innerHTML    = '<option value="">All Classes</option>'   + classes.map(c   => `<option>${c}</option>`).join('');
-  document.getElementById('hist-response').innerHTML = '<option value="">All Responses</option>' + responses.map(r => `<option>${r}</option>`).join('');
   document.getElementById('hist-instance').innerHTML = '<option value="">All Instances</option>' + instances.map(i  => `<option>${i}</option>`).join('');
-  buildDateMsel(dates);
+  buildMsel('date', dates, { label: excelDateToStr, allLabel: 'All Dates', oneLabel: 'Date', manyLabel: 'Dates', numeric: true });
+  buildMsel('response', responses, { label: v => v, allLabel: 'All Responses', oneLabel: 'Response', manyLabel: 'Responses', numeric: false });
 }
 
-// ── DATE MULTI-SELECT ──
-let selectedDates = new Set();
+// ── GENERIC MULTI-SELECT ──
+const mselState  = {};   // key -> Set of selected raw values
+const mselConfig = {};   // key -> { label, allLabel, oneLabel, manyLabel }
 
-function buildDateMsel(dates) {
-  const panel = document.getElementById('hist-date-panel');
-  if (!dates.length) {
-    panel.innerHTML = '<div class="msel-empty">No dates available.</div>';
-    return;
+function buildMsel(key, values, cfg) {
+  mselState[key]  = new Set();
+  mselConfig[key] = cfg;
+  const panel = document.getElementById(`hist-${key}-panel`);
+  if (!values.length) {
+    panel.innerHTML = '<div class="msel-empty">No options available.</div>';
+  } else {
+    panel.innerHTML =
+      '<div class="msel-actions">' +
+        `<button type="button" onclick="setAllMsel('${key}', true)">Select all</button>` +
+        `<button type="button" onclick="setAllMsel('${key}', false)">Clear</button>` +
+      '</div>' +
+      values.map(v => `
+        <label class="msel-opt">
+          <input type="checkbox" value="${v}" onchange="toggleMselOption('${key}', this.value, this.checked)">
+          <span>${cfg.label(v)}</span>
+        </label>`).join('');
   }
-  panel.innerHTML =
-    '<div class="msel-actions">' +
-      '<button type="button" onclick="setAllDates(true)">Select all</button>' +
-      '<button type="button" onclick="setAllDates(false)">Clear</button>' +
-    '</div>' +
-    dates.map(d => `
-      <label class="msel-opt">
-        <input type="checkbox" value="${d}" onchange="toggleDate(${d}, this.checked)">
-        <span>${excelDateToStr(d)}</span>
-      </label>`).join('');
+  updateMselLabel(key);
 }
 
-function toggleDate(d, checked) {
-  if (checked) selectedDates.add(d); else selectedDates.delete(d);
-  updateDateLabel();
+function toggleMselOption(key, rawValue, checked) {
+  const value = mselConfig[key].numeric ? parseFloat(rawValue) : rawValue;
+  if (checked) mselState[key].add(value); else mselState[key].delete(value);
+  updateMselLabel(key);
   renderHistory();
 }
 
-function setAllDates(all) {
-  const checkboxes = document.querySelectorAll('#hist-date-panel input[type=checkbox]');
-  selectedDates = new Set(all ? [...checkboxes].map(c => parseFloat(c.value)) : []);
+function setAllMsel(key, all) {
+  const checkboxes = document.querySelectorAll(`#hist-${key}-panel input[type=checkbox]`);
+  const coerce = mselConfig[key].numeric ? parseFloat : (v => v);
+  mselState[key] = new Set(all ? [...checkboxes].map(c => coerce(c.value)) : []);
   checkboxes.forEach(c => c.checked = all);
-  updateDateLabel();
+  updateMselLabel(key);
   renderHistory();
 }
 
-function updateDateLabel() {
-  const label = document.getElementById('hist-date-label');
-  const btn   = document.getElementById('hist-date-btn');
-  let html = 'All Dates';
-  if (selectedDates.size === 1) {
-    html = excelDateToStr([...selectedDates][0]);
-  } else if (selectedDates.size > 1) {
-    html = `Dates <span class="msel-count">${selectedDates.size}</span>`;
+function updateMselLabel(key) {
+  const label = document.getElementById(`hist-${key}-label`);
+  if (!label) return;
+  const cfg = mselConfig[key];
+  const sel = mselState[key];
+  let html = cfg.allLabel;
+  if (sel.size === 1) {
+    html = cfg.label([...sel][0]);
+  } else if (sel.size > 1) {
+    html = `${cfg.manyLabel} <span class="msel-count">${sel.size}</span>`;
   }
   label.innerHTML = html;
 }
 
-function toggleDateMsel() {
-  document.getElementById('hist-date-msel').classList.toggle('open');
+function toggleMsel(key) {
+  document.getElementById(`hist-${key}-msel`).classList.toggle('open');
 }
 
 document.addEventListener('click', (e) => {
-  const msel = document.getElementById('hist-date-msel');
-  if (msel && !msel.contains(e.target)) msel.classList.remove('open');
+  document.querySelectorAll('.msel.open').forEach(msel => {
+    if (!msel.contains(e.target)) msel.classList.remove('open');
+  });
 });
 
 // ── LOOT HISTORY ──
@@ -911,14 +926,15 @@ function sortHistory(col) {
 function renderHistory() {
   const search = document.getElementById('hist-search').value.toLowerCase();
   const cls    = document.getElementById('hist-class').value;
-  const resp   = document.getElementById('hist-response').value;
   const inst   = document.getElementById('hist-instance').value;
+  const respSel = mselState.response || new Set();
+  const dateSel = mselState.date || new Set();
 
   let rows = allRows.filter(r => {
     if (cls  && r.cls !== cls) return false;
-    if (resp && responseLabel(r.response) !== resp) return false;
+    if (respSel.size && !respSel.has(responseLabel(r.response))) return false;
     if (inst && r.instance !== inst) return false;
-    if (selectedDates.size && !selectedDates.has(parseFloat(r.date))) return false;
+    if (dateSel.size && !dateSel.has(parseFloat(r.date))) return false;
     if (search && ![r.player, r.item, r.boss, r.instance].join(' ').toLowerCase().includes(search)) return false;
     return true;
   });
