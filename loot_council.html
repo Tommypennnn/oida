@@ -359,6 +359,7 @@
         <select class="filter-input" id="hist-class" onchange="renderHistory()"><option value="">All Classes</option></select>
         <select class="filter-input" id="hist-response" onchange="renderHistory()"><option value="">All Responses</option></select>
         <select class="filter-input" id="hist-instance" onchange="renderHistory()"><option value="">All Instances</option></select>
+        <select class="filter-input" id="hist-date" onchange="renderHistory()"><option value="">All Dates</option></select>
         <span class="result-count" id="hist-count"></span>
       </div>
       <div class="table-wrap">
@@ -809,9 +810,11 @@ function buildFilters() {
   const classes   = [...new Set(allRows.map(r => r.cls))].filter(Boolean).sort();
   const responses = [...new Set(allRows.map(r => responseLabel(r.response)))].filter(r => r !== '—').sort();
   const instances = [...new Set(allRows.map(r => r.instance))].filter(Boolean).sort();
+  const dates     = [...new Set(allRows.map(r => parseFloat(r.date)))].filter(d => !isNaN(d)).sort((a,b) => b-a);
   document.getElementById('hist-class').innerHTML    = '<option value="">All Classes</option>'   + classes.map(c   => `<option>${c}</option>`).join('');
   document.getElementById('hist-response').innerHTML = '<option value="">All Responses</option>' + responses.map(r => `<option>${r}</option>`).join('');
   document.getElementById('hist-instance').innerHTML = '<option value="">All Instances</option>' + instances.map(i  => `<option>${i}</option>`).join('');
+  document.getElementById('hist-date').innerHTML      = '<option value="">All Dates</option>'     + dates.map(d     => `<option value="${d}">${excelDateToStr(d)}</option>`).join('');
 }
 
 // ── LOOT HISTORY ──
@@ -831,11 +834,13 @@ function renderHistory() {
   const cls    = document.getElementById('hist-class').value;
   const resp   = document.getElementById('hist-response').value;
   const inst   = document.getElementById('hist-instance').value;
+  const dateF  = document.getElementById('hist-date').value;
 
   let rows = allRows.filter(r => {
     if (cls  && r.cls !== cls) return false;
     if (resp && responseLabel(r.response) !== resp) return false;
     if (inst && r.instance !== inst) return false;
+    if (dateF && String(parseFloat(r.date)) !== dateF) return false;
     if (search && ![r.player, r.item, r.boss, r.instance].join(' ').toLowerCase().includes(search)) return false;
     return true;
   });
