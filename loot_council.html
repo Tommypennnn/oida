@@ -161,6 +161,20 @@
   .msel-opt input{cursor:pointer;accent-color:var(--accent)}
   .msel-empty{font-size:12px;color:var(--text-dim);padding:8px}
 
+  /* ── STACKED BAR CHART ── */
+  .chart-scroll{overflow-x:auto;padding:20px 16px 8px}
+  .chart-bar-group:hover .chart-seg{opacity:.85}
+  .chart-seg{transition:opacity .15s}
+  .chart-axis-line{stroke:var(--border);stroke-width:1}
+  .chart-bar-label{font-size:11px;fill:var(--text-mid);font-family:var(--font);text-anchor:middle}
+  .chart-total-label{font-size:12px;font-weight:600;fill:var(--text);font-family:var(--font);text-anchor:middle}
+  .chart-tick-label{font-size:10px;fill:var(--text-dim);font-family:var(--font);text-anchor:end}
+  .chart-empty{font-size:13px;color:var(--text-dim);text-align:center;padding:40px 0}
+  .chart-legend{display:flex;gap:14px;flex-wrap:wrap;padding:4px 16px 16px;border-top:1px solid var(--border)}
+  .chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-mid);margin-top:12px}
+  .chart-legend-swatch{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .chart-tooltip{position:absolute;background:var(--text);color:#fff;font-size:12px;padding:6px 9px;border-radius:6px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .1s;z-index:60;transform:translate(-50%,-100%)}
+
   .table-wrap{background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:65vh;box-shadow:var(--shadow-sm)}
   table.main-table{width:100%;border-collapse:collapse}
   table.main-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap}
@@ -403,6 +417,14 @@
           </tr></thead>
           <tbody id="hist-body"></tbody>
         </table>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header">Items Received by Player</div>
+        <div class="chart-scroll" id="hist-chart-wrap">
+          <svg id="hist-chart" width="100%"></svg>
+        </div>
+        <div class="chart-legend" id="hist-chart-legend"></div>
       </div>
     </div>
   </div>
@@ -952,6 +974,7 @@ function renderHistory() {
   const tbody = document.getElementById('hist-body');
   if (!rows.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No entries match your filters.</td></tr>';
+    renderHistoryChart(rows);
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -968,6 +991,141 @@ function renderHistory() {
       <td class="text-dim">${gear}</td>
     </tr>`;
   }).join('');
+  renderHistoryChart(rows);
+}
+
+// ── HISTORY CHART: items received by player (stacked by response) ──
+const CHART_RESPONSE_ORDER = ['resp-bis', 'resp-2ndbis', 'resp-upgrade', 'resp-offspec', 'resp-pass', 'resp-other'];
+const CHART_RESPONSE_VAR = {
+  'resp-bis':     '--accent',
+  'resp-2ndbis':  '--purple',
+  'resp-upgrade': '--green',
+  'resp-offspec': '--blue',
+  'resp-pass':    '--gray',
+  'resp-other':   null, // literal fallback color, no CSS var
+};
+const CHART_RESPONSE_FALLBACK = '#d1d5db';
+function chartResponseColor(rc) {
+  const varName = CHART_RESPONSE_VAR[rc];
+  if (!varName) return CHART_RESPONSE_FALLBACK;
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || CHART_RESPONSE_FALLBACK;
+}
+const CHART_RESPONSE_DISPLAY = {
+  'resp-bis':     'BiS',
+  'resp-2ndbis':  '2nd BiS',
+  'resp-upgrade': 'Upgrade',
+  'resp-offspec': 'Offspec',
+  'resp-pass':    'Pass',
+  'resp-other':   'Other',
+};
+
+function renderHistoryChart(rows) {
+  const wrap = document.getElementById('hist-chart-wrap');
+  const svg  = document.getElementById('hist-chart');
+  const legend = document.getElementById('hist-chart-legend');
+  document.querySelectorAll('.chart-tooltip').forEach(t => t.remove());
+
+  if (!rows.length) {
+    svg.innerHTML = '';
+    svg.style.height = '0';
+    legend.innerHTML = '';
+    wrap.insertAdjacentHTML('beforeend', '<div class="chart-empty" id="hist-chart-empty">No data to chart for the current filters.</div>');
+    return;
+  }
+  const existingEmpty = document.getElementById('hist-chart-empty');
+  if (existingEmpty) existingEmpty.remove();
+
+  // Aggregate per player, stacked by response type
+  const playerMap = {};
+  rows.forEach(r => {
+    const name = r.player.split('-')[0];
+    if (!playerMap[name]) playerMap[name] = {};
+    const rc = responseClass(r.response);
+    playerMap[name][rc] = (playerMap[name][rc] || 0) + 1;
+  });
+
+  const players = Object.entries(playerMap)
+    .map(([name, counts]) => ({
+      name,
+      counts,
+      total: Object.values(counts).reduce((a,b) => a+b, 0),
+    }))
+    .sort((a,b) => b.total - a.total); // descending: most items left, least right
+
+  const usedResponses = CHART_RESPONSE_ORDER.filter(rc => players.some(p => p.counts[rc]));
+
+  // ── Layout ──
+  const barW = 38, gap = 18, leftPad = 44, rightPad = 16, topPad = 28, bottomPad = 60;
+  const maxTotal = Math.max(...players.map(p => p.total), 1);
+  const chartH = 260;
+  const innerH = chartH - topPad - bottomPad;
+  const chartW = leftPad + players.length * (barW + gap) + rightPad;
+  const svgH = chartH;
+
+  svg.setAttribute('viewBox', `0 0 ${chartW} ${svgH}`);
+  svg.style.height = svgH + 'px';
+  svg.style.minWidth = chartW + 'px';
+  svg.style.display = 'block';
+
+  // Y-axis ticks (5 steps)
+  const steps = 5;
+  let ticksSvg = '';
+  for (let i = 0; i <= steps; i++) {
+    const val = Math.round((maxTotal / steps) * i);
+    const y = topPad + innerH - (innerH * i / steps);
+    ticksSvg += `<line class="chart-axis-line" x1="${leftPad}" y1="${y}" x2="${chartW - rightPad}" y2="${y}"></line>`;
+    ticksSvg += `<text class="chart-tick-label" x="${leftPad - 8}" y="${y + 3}">${val}</text>`;
+  }
+
+  let barsSvg = '';
+  players.forEach((p, i) => {
+    const x = leftPad + i * (barW + gap);
+    let yCursor = topPad + innerH;
+    let segsSvg = '';
+    usedResponses.forEach(rc => {
+      const count = p.counts[rc] || 0;
+      if (!count) return;
+      const segH = (count / maxTotal) * innerH;
+      yCursor -= segH;
+      segsSvg += `<rect class="chart-seg" x="${x}" y="${yCursor.toFixed(1)}" width="${barW}" height="${segH.toFixed(1)}" fill="${chartResponseColor(rc)}" rx="2"
+        onmousemove="showChartTooltip(event, '${p.name.replace(/'/g,"\\'")}', '${CHART_RESPONSE_DISPLAY[rc]}', ${count})"
+        onmouseleave="hideChartTooltip()"></rect>`;
+    });
+    const labelX = x + barW/2;
+    barsSvg += `<g class="chart-bar-group">
+      ${segsSvg}
+      <text class="chart-total-label" x="${labelX}" y="${topPad + innerH - (p.total/maxTotal)*innerH - 8}">${p.total}</text>
+      <text class="chart-bar-label" x="${labelX}" y="${topPad + innerH + 18}">${p.name}</text>
+    </g>`;
+  });
+
+  svg.innerHTML = ticksSvg + barsSvg;
+
+  // Legend
+  legend.innerHTML = usedResponses.map(rc => `
+    <span class="chart-legend-item">
+      <span class="chart-legend-swatch" style="background:${chartResponseColor(rc)}"></span>
+      ${CHART_RESPONSE_DISPLAY[rc]}
+    </span>`).join('');
+}
+
+function showChartTooltip(evt, player, respLabel, count) {
+  let tip = document.getElementById('chart-tooltip-active');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'chart-tooltip-active';
+    tip.className = 'chart-tooltip';
+    document.body.appendChild(tip);
+  }
+  tip.textContent = `${player} — ${respLabel}: ${count}`;
+  tip.style.left = evt.clientX + 'px';
+  tip.style.top  = (evt.clientY - 10) + 'px';
+  tip.style.opacity = '1';
+}
+
+function hideChartTooltip() {
+  const tip = document.getElementById('chart-tooltip-active');
+  if (tip) tip.style.opacity = '0';
 }
 
 // ── PLAYER LOOKUP ──
