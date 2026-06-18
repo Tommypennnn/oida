@@ -465,7 +465,7 @@
         <span class="result-count" id="drought-count"></span>
       </div>
       <div class="panel">
-        <div class="panel-header">Loot Drought — longest time since last item, most overdue first</div>
+        <div class="panel-header" id="drought-panel-header">Loot Drought — longest time since last item, most overdue first</div>
         <div id="drought-list"></div>
       </div>
     </div>
@@ -1192,31 +1192,41 @@ function renderDrought() {
   const search = (document.getElementById('drought-search').value || '').toLowerCase();
   const cls    = document.getElementById('drought-class').value;
   const respSel = mselState['drought-response'] || new Set();
+  const filtering = respSel.size > 0;
 
   const players = [...new Set(allRows.map(r => r.player))];
   let entries = players.map(full => {
-    const stats = getPlayerStats(full);
     const name = full.split('-')[0];
-    const playerCls = stats ? stats.cls : (allRows.find(r => r.player === full) || {}).cls;
     const playerRows = allRows.filter(r => r.player === full).sort((a,b) => parseFloat(b.date) - parseFloat(a.date));
-    const lastResponse = playerRows.length ? responseLabel(playerRows[0].response) : null;
+    const playerCls = playerRows.length ? playerRows[0].cls : null;
+
+    // Pool to search for "last received" depends on whether a response filter is active:
+    // unfiltered -> any item counts; filtered -> only items matching the selected response types count.
+    const pool = filtering ? playerRows.filter(r => respSel.has(responseLabel(r.response))) : playerRows;
+    const last = pool[0] || null;
+    const lastDateSerial = last ? parseFloat(last.date) : null;
+    const daysSinceLast = lastDateSerial && !isNaN(lastDateSerial)
+      ? Math.round((Date.now()/86400000) - (lastDateSerial - 25569))
+      : null; // null = no qualifying item ever received
+    const lastItem = lastDateSerial && !isNaN(lastDateSerial) ? excelDateToStr(lastDateSerial) : null;
+    const lastResponse = last ? responseLabel(last.response) : null;
+
     return {
       full, name, cls: playerCls,
-      daysSinceLast: stats ? stats.daysSinceLast : null, // null = never received loot
-      lastItem: stats ? stats.lastItem : null,
+      daysSinceLast,
+      lastItem,
       lastResponse,
-      total: stats ? stats.total : 0,
+      total: playerRows.length,
     };
   });
 
   entries = entries.filter(e => {
     if (cls && e.cls !== cls) return false;
-    if (respSel.size && !respSel.has(e.lastResponse)) return false;
     if (search && !e.name.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  // Sort: never-received first (most overdue), then by days since last descending
+  // Sort: no qualifying item first (most overdue), then by days since last descending
   entries.sort((a, b) => {
     const av = a.daysSinceLast === null ? Infinity : a.daysSinceLast;
     const bv = b.daysSinceLast === null ? Infinity : b.daysSinceLast;
@@ -1225,6 +1235,12 @@ function renderDrought() {
 
   document.getElementById('drought-count').textContent = `${entries.length} players`;
   const list = document.getElementById('drought-list');
+  const panelHeader = document.getElementById('drought-panel-header');
+  if (panelHeader) {
+    panelHeader.textContent = filtering
+      ? `Loot Drought — longest time since last ${[...respSel].join(' / ')} item, most overdue first`
+      : 'Loot Drought — longest time since last item, most overdue first';
+  }
 
   if (!entries.length) {
     list.innerHTML = '<div class="chart-empty">No players match your filters.</div>';
@@ -1233,6 +1249,7 @@ function renderDrought() {
 
   const CAP = SCORE_WEIGHTS.droughtCapDays;
   const maxDays = Math.max(...entries.map(e => e.daysSinceLast === null ? CAP : Math.min(e.daysSinceLast, CAP)), 1);
+  const neverBadge = filtering ? 'No match' : 'Never';
 
   list.innerHTML = entries.map((e, i) => {
     const never = e.daysSinceLast === null;
@@ -1245,7 +1262,7 @@ function renderDrought() {
       <span class="drought-player">
         ${classBadge(e.cls)}
         <span class="drought-name">${e.name}</span>
-        ${never ? '<span class="drought-never-badge">Never</span>' : ''}
+        ${never ? `<span class="drought-never-badge">${neverBadge}</span>` : ''}
       </span>
       <div class="drought-bar-wrap"><div class="drought-bar ${never ? 'is-never' : ''}" style="width:${pct}%"></div></div>
       <span class="drought-days ${never ? 'is-never' : ''}">${daysLabel}</span>
