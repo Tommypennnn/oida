@@ -175,6 +175,20 @@
   .chart-legend-swatch{width:10px;height:10px;border-radius:2px;display:inline-block}
   .chart-tooltip{position:absolute;background:var(--text);color:#fff;font-size:12px;padding:6px 9px;border-radius:6px;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .1s;z-index:60;transform:translate(-50%,-100%)}
 
+  /* ── DROUGHT TAB ── */
+  .drought-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border)}
+  .drought-row:last-child{border-bottom:none}
+  .drought-rank{font-size:12px;color:var(--text-dim);min-width:22px;font-weight:600}
+  .drought-player{min-width:170px;display:flex;align-items:center;gap:8px}
+  .drought-name{font-size:13px;font-weight:600;color:var(--text)}
+  .drought-bar-wrap{flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden}
+  .drought-bar{height:100%;border-radius:99px;transition:width .5s ease;background:var(--orange)}
+  .drought-bar.is-never{background:var(--red)}
+  .drought-days{font-size:12px;font-weight:600;color:var(--orange);min-width:88px;text-align:right}
+  .drought-days.is-never{color:var(--red)}
+  .drought-last{font-size:11px;color:var(--text-dim);min-width:150px;text-align:right}
+  .drought-never-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--red-bg);color:var(--red);border-radius:99px;padding:2px 8px}
+
   .table-wrap{background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:65vh;box-shadow:var(--shadow-sm)}
   table.main-table{width:100%;border-collapse:collapse}
   table.main-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap}
@@ -268,6 +282,7 @@
 <nav>
   <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
   <div class="tab" onclick="switchTab('history')">Loot History</div>
+  <div class="tab" onclick="switchTab('drought')">Drought</div>
   <div class="tab" onclick="switchTab('lookup')">Player Lookup</div>
   <div class="tab" onclick="switchTab('council')">⚖️ Council Tool</div>
 </nav>
@@ -425,6 +440,33 @@
           <svg id="hist-chart" width="100%"></svg>
         </div>
         <div class="chart-legend" id="hist-chart-legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DROUGHT -->
+  <div class="section" id="section-drought">
+    <div class="placeholder" id="drought-placeholder">
+      <div class="placeholder-icon">⏳</div>
+      <h2>Loading data…</h2>
+      <p>Fetching loot records from the repository.</p>
+    </div>
+    <div id="drought-content" style="display:none">
+      <div class="filters">
+        <input class="filter-input" id="drought-search" placeholder="Search player…" oninput="renderDrought()" style="min-width:220px">
+        <select class="filter-input" id="drought-class" onchange="renderDrought()"><option value="">All Classes</option></select>
+        <div class="msel" id="drought-response-msel">
+          <button type="button" class="msel-btn" onclick="toggleMsel('drought-response')">
+            <span id="drought-response-label">All Responses</span>
+            <span class="msel-caret">▾</span>
+          </button>
+          <div class="msel-panel" id="drought-response-panel"></div>
+        </div>
+        <span class="result-count" id="drought-count"></span>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Loot Drought — longest time since last item, most overdue first</div>
+        <div id="drought-list"></div>
       </div>
     </div>
   </div>
@@ -593,11 +635,14 @@ function buildUI() {
   buildDashboard();
   buildFilters();
   renderHistory();
+  buildDroughtFilters();
+  renderDrought();
   buildPlayerSelect();
   populateDatalist();
   [
     ['dash-placeholder','dash-content'],
     ['hist-placeholder','hist-content'],
+    ['drought-placeholder','drought-content'],
     ['look-placeholder','look-content'],
   ].forEach(([ph,ct]) => {
     const phEl = document.getElementById(ph);
@@ -864,18 +909,25 @@ function buildFilters() {
   const dates     = [...new Set(allRows.map(r => parseFloat(r.date)))].filter(d => !isNaN(d)).sort((a,b) => b-a);
   document.getElementById('hist-class').innerHTML    = '<option value="">All Classes</option>'   + classes.map(c   => `<option>${c}</option>`).join('');
   document.getElementById('hist-instance').innerHTML = '<option value="">All Instances</option>' + instances.map(i  => `<option>${i}</option>`).join('');
-  buildMsel('date', dates, { label: excelDateToStr, allLabel: 'All Dates', oneLabel: 'Date', manyLabel: 'Dates', numeric: true });
-  buildMsel('response', responses, { label: v => v, allLabel: 'All Responses', oneLabel: 'Response', manyLabel: 'Responses', numeric: false });
+  buildMsel('date', dates, { label: excelDateToStr, allLabel: 'All Dates', oneLabel: 'Date', manyLabel: 'Dates', numeric: true, idPrefix: 'hist', onChange: renderHistory });
+  buildMsel('response', responses, { label: v => v, allLabel: 'All Responses', oneLabel: 'Response', manyLabel: 'Responses', numeric: false, idPrefix: 'hist', onChange: renderHistory });
 }
 
 // ── GENERIC MULTI-SELECT ──
 const mselState  = {};   // key -> Set of selected raw values
-const mselConfig = {};   // key -> { label, allLabel, oneLabel, manyLabel }
+const mselConfig = {};   // key -> { label, allLabel, oneLabel, manyLabel, numeric, idPrefix, onChange }
+
+function mselId(key, suffix) {
+  const cfg = mselConfig[key];
+  const prefix = cfg && cfg.idPrefix !== undefined ? cfg.idPrefix : 'hist';
+  return prefix ? `${prefix}-${key}-${suffix}` : `${key}-${suffix}`;
+}
 
 function buildMsel(key, values, cfg) {
   mselState[key]  = new Set();
   mselConfig[key] = cfg;
-  const panel = document.getElementById(`hist-${key}-panel`);
+  const panel = document.getElementById(mselId(key, 'panel'));
+  if (!panel) return;
   if (!values.length) {
     panel.innerHTML = '<div class="msel-empty">No options available.</div>';
   } else {
@@ -897,20 +949,20 @@ function toggleMselOption(key, rawValue, checked) {
   const value = mselConfig[key].numeric ? parseFloat(rawValue) : rawValue;
   if (checked) mselState[key].add(value); else mselState[key].delete(value);
   updateMselLabel(key);
-  renderHistory();
+  if (mselConfig[key].onChange) mselConfig[key].onChange();
 }
 
 function setAllMsel(key, all) {
-  const checkboxes = document.querySelectorAll(`#hist-${key}-panel input[type=checkbox]`);
+  const checkboxes = document.querySelectorAll(`#${mselId(key, 'panel')} input[type=checkbox]`);
   const coerce = mselConfig[key].numeric ? parseFloat : (v => v);
   mselState[key] = new Set(all ? [...checkboxes].map(c => coerce(c.value)) : []);
   checkboxes.forEach(c => c.checked = all);
   updateMselLabel(key);
-  renderHistory();
+  if (mselConfig[key].onChange) mselConfig[key].onChange();
 }
 
 function updateMselLabel(key) {
-  const label = document.getElementById(`hist-${key}-label`);
+  const label = document.getElementById(mselId(key, 'label'));
   if (!label) return;
   const cfg = mselConfig[key];
   const sel = mselState[key];
@@ -924,7 +976,7 @@ function updateMselLabel(key) {
 }
 
 function toggleMsel(key) {
-  document.getElementById(`hist-${key}-msel`).classList.toggle('open');
+  document.getElementById(mselId(key, 'msel')).classList.toggle('open');
 }
 
 document.addEventListener('click', (e) => {
@@ -1128,6 +1180,80 @@ function hideChartTooltip() {
   if (tip) tip.style.opacity = '0';
 }
 
+// ── DROUGHT TAB ──
+function buildDroughtFilters() {
+  const classes = [...new Set(allRows.map(r => r.cls))].filter(Boolean).sort();
+  document.getElementById('drought-class').innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option>${c}</option>`).join('');
+  const responses = [...new Set(allRows.map(r => responseLabel(r.response)))].filter(r => r !== '—').sort();
+  buildMsel('drought-response', responses, { label: v => v, allLabel: 'All Responses', oneLabel: 'Response', manyLabel: 'Responses', numeric: false, idPrefix: '', onChange: renderDrought });
+}
+
+function renderDrought() {
+  const search = (document.getElementById('drought-search').value || '').toLowerCase();
+  const cls    = document.getElementById('drought-class').value;
+  const respSel = mselState['drought-response'] || new Set();
+
+  const players = [...new Set(allRows.map(r => r.player))];
+  let entries = players.map(full => {
+    const stats = getPlayerStats(full);
+    const name = full.split('-')[0];
+    const playerCls = stats ? stats.cls : (allRows.find(r => r.player === full) || {}).cls;
+    const playerRows = allRows.filter(r => r.player === full).sort((a,b) => parseFloat(b.date) - parseFloat(a.date));
+    const lastResponse = playerRows.length ? responseLabel(playerRows[0].response) : null;
+    return {
+      full, name, cls: playerCls,
+      daysSinceLast: stats ? stats.daysSinceLast : null, // null = never received loot
+      lastItem: stats ? stats.lastItem : null,
+      lastResponse,
+      total: stats ? stats.total : 0,
+    };
+  });
+
+  entries = entries.filter(e => {
+    if (cls && e.cls !== cls) return false;
+    if (respSel.size && !respSel.has(e.lastResponse)) return false;
+    if (search && !e.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sort: never-received first (most overdue), then by days since last descending
+  entries.sort((a, b) => {
+    const av = a.daysSinceLast === null ? Infinity : a.daysSinceLast;
+    const bv = b.daysSinceLast === null ? Infinity : b.daysSinceLast;
+    return bv - av;
+  });
+
+  document.getElementById('drought-count').textContent = `${entries.length} players`;
+  const list = document.getElementById('drought-list');
+
+  if (!entries.length) {
+    list.innerHTML = '<div class="chart-empty">No players match your filters.</div>';
+    return;
+  }
+
+  const CAP = SCORE_WEIGHTS.droughtCapDays;
+  const maxDays = Math.max(...entries.map(e => e.daysSinceLast === null ? CAP : Math.min(e.daysSinceLast, CAP)), 1);
+
+  list.innerHTML = entries.map((e, i) => {
+    const never = e.daysSinceLast === null;
+    const days = never ? CAP : Math.min(e.daysSinceLast, CAP);
+    const pct = Math.round((days / maxDays) * 100);
+    const daysLabel = never ? 'No history' : `${e.daysSinceLast}d`;
+    const lastLabel = never ? '' : `Last: ${e.lastItem} · ${e.lastResponse}`;
+    return `<div class="drought-row">
+      <span class="drought-rank">#${i+1}</span>
+      <span class="drought-player">
+        ${classBadge(e.cls)}
+        <span class="drought-name">${e.name}</span>
+        ${never ? '<span class="drought-never-badge">Never</span>' : ''}
+      </span>
+      <div class="drought-bar-wrap"><div class="drought-bar ${never ? 'is-never' : ''}" style="width:${pct}%"></div></div>
+      <span class="drought-days ${never ? 'is-never' : ''}">${daysLabel}</span>
+      <span class="drought-last">${lastLabel}</span>
+    </div>`;
+  }).join('');
+}
+
 // ── PLAYER LOOKUP ──
 function buildPlayerSelect() {
   const players = [...new Set(allRows.map(r => r.player))].sort();
@@ -1190,7 +1316,7 @@ function renderLookup() {
 // ── TAB SWITCHING ──
 function switchTab(id) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['dashboard','history','lookup','council'][i] === id);
+    t.classList.toggle('active', ['dashboard','history','drought','lookup','council'][i] === id);
   });
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
